@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:security="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/aop
+		http://www.springframework.org/schema/aop/spring-aop.xsd
+		http://www.springframework.org/schema/tx
+		http://www.springframework.org/schema/tx/spring-tx.xsd
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/mvc
+		http://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/security
+        http://www.springframework.org/schema/security/spring-security.xsd">
+	<context:property-placeholder location="escm.properties" />
+
+	<context:component-scan base-package="com" />
+
+	<mvc:annotation-driven />
+	<mvc:default-servlet-handler />
+	
+	<mvc:resources location="/js/" mapping="/js/**" />
+	<mvc:resources location="/themes/" mapping="/themes/**" />
+
+	<tx:annotation-driven transaction-manager="txManager" />
+
+	<bean id="txManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+		destroy-method="close">
+		<property name="driverClass" value="${jdbc.driverClassName}" />
+		<property name="jdbcUrl" value="${jdbc.url}" />
+		<property name="user" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+	</bean>
+
+	<!-- JDBC模板 -->
+	<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<!-- 启动Spring MVC的注解功能，完成请求和注解POJO的映射 -->
+	<bean
+		class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter" />
+
+	<!-- 定义tiles视图解析器 -->
+	<bean id="tilesViewResolver"
+		class="org.springframework.web.servlet.view.UrlBasedViewResolver">
+		<property name="viewClass">
+			<value>org.springframework.web.servlet.view.tiles3.TilesView</value>
+		</property>
+	</bean>
+
+	<bean id="tilesConfigurer"
+		class="org.springframework.web.servlet.view.tiles3.TilesConfigurer">
+		<property name="definitions">
+			<list>
+				<value>/WEB-INF/tiles/config/definitions.xml</value>
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="viewResolver"
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/" />
+		<property name="suffix" value=".jsp" />
+		<property name="contentType">
+			<value>text/html; charset=UTF-8</value>
+		</property>
+	</bean>
+
+	<!-- 启用用户的缓存功能 -->
+	<bean id="userCache"
+		class="org.springframework.security.core.userdetails.cache.EhCacheBasedUserCache">
+		<property name="cache" ref="userEhCache" />
+	</bean>
+
+	<bean id="userEhCache" class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+		<property name="cacheName" value="userCache" />
+		<property name="cacheManager" ref="cacheManager" />
+	</bean>
+
+	<bean id="cacheManager"
+		class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" />
+</beans>

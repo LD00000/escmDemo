@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+       "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+       "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+    <definition name="secure.main" template="/WEB-INF/tiles/template/default/default.jsp">
+        <put-attribute name="title" value="" type="string" />
+        <put-attribute name="menu" value="/WEB-INF/tiles/template/default/menu.jsp" />
+        <put-attribute name="body" value="/WEB-INF/tiles/template/default/body.jsp" />
+    </definition>
+    
+    <definition name="secure.sql.main" extends="secure.main">
+        <put-attribute name="title" value="SQL管理" type="string" />
+        <put-attribute name="body" value="/WEB-INF/jsp/sql/body.jsp" />
+    </definition>
+    <definition name="secure.project.main" extends="secure.main">
+        <put-attribute name="title" value="项目管理" type="string" />
+        <put-attribute name="body" value="/WEB-INF/jsp/project/body.jsp" />
+    </definition>
+</tiles-definitions>

@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:security="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/aop
+		http://www.springframework.org/schema/aop/spring-aop.xsd
+		http://www.springframework.org/schema/tx
+		http://www.springframework.org/schema/tx/spring-tx.xsd
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/mvc
+		http://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/security
+		http://www.springframework.org/schema/security/spring-security.xsd">
+	<!-- 国际化 -->
+	<bean id="messageSource"
+		class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+		<property name="basename"
+			value="classpath:org/springframework/security/messages_zh_CN" />
+	</bean>
+
+	<security:global-method-security
+		pre-post-annotations="enabled" />
+
+	<!-- 需要过滤不被拦截的请求 -->
+	<security:http pattern="/js/**" security="none" />
+	<security:http pattern="/themes/**" security="none" />
+
+	<bean
+		class="org.springframework.security.web.access.expression.DefaultWebSecurityExpressionHandler" />
+
+	<security:http auto-config="false" use-expressions="true"
+		entry-point-ref="authenticationEntryPoint">
+		<security:logout logout-url="/logout.htm" delete-cookies="JSESSIONID"
+			success-handler-ref="escmLogoutSuccessHandler" />
+		<security:remember-me user-service-ref="escmUserDetailsService" />
+		<security:csrf />
+
+		<security:session-management
+			session-authentication-strategy-ref="escmConcurrentSessionControlAuthenticationStrategy" />
+
+		<security:custom-filter ref="escmLoginFilter" position="FORM_LOGIN_FILTER" />
+		<security:custom-filter ref="escmSecurityFilter" before="FILTER_SECURITY_INTERCEPTOR" />
+		<!-- 防止同一个账户同时登录 -->
+		<security:custom-filter ref="escmConcurrentSessionFilter"
+			position="CONCURRENT_SESSION_FILTER" />
+	</security:http>
+
+	<security:authentication-manager alias="escmAuthenticationManager">
+		<security:authentication-provider
+			ref="authenticationProvider" />
+	</security:authentication-manager>
+
+	<bean id="authenticationProvider"
+		class="org.springframework.security.authentication.dao.DaoAuthenticationProvider">
+		<property name="userDetailsService" ref="escmUserDetailsService" />
+		<property name="hideUserNotFoundExceptions" value="false" />
+		<property name="passwordEncoder" ref="passwordEncoder" />
+	</bean>
+
+	<!-- 登录验证过滤器 -->
+	<bean id="escmLoginFilter"
+		class="com.sunwayworld.escm.core.security.EscmUsernamePasswordAuthenticationFilter">
+		<!-- 登录用户的参数名称 -->
+		<property name="usernameParameter" value="id" />
+		<!-- 登录用户密码的参数名称 -->
+		<property name="passwordParameter" value="password" />
+		<!-- 登录的action -->
+		<property name="filterProcessesUrl" value="/j_spring_security_check" />
+
+		<!-- 身份验证管理类 -->
+		<property name="authenticationManager" ref="escmAuthenticationManager" />
+		<!-- 验证成功后的处理 -->
+		<property name="authenticationSuccessHandler" ref="escmAuthenticationSuccessHandler" />
+		<!-- 验证失败后的处理 -->
+		<property name="authenticationFailureHandler" ref="escmAuthenticationFailureHandler" />
+	</bean>
+
+	<!-- 登出成功后的处理 -->
+	<bean id="escmLogoutSuccessHandler"
+		class="com.sunwayworld.escm.core.security.EscmLogoutSuccessHandler">
+		<property name="defaultTargetUrl" value="/login.htm?logout=1" />
+	</bean>
+
+	<!-- 配置过滤器 -->
+	<bean id="escmSecurityFilter" class="com.sunwayworld.escm.core.security.EscmSecurityFilter">
+		<!-- 身份验证管理类 -->
+		<property name="authenticationManager" ref="escmAuthenticationManager" />
+		<!-- 用户是否拥有所请求资源的权限的管理类 -->
+		<property name="accessDecisionManager" ref="escmAccessDecisionManager" />
+		<!-- 资源与权限对应关系 -->
+		<property name="securityMetadataSource">
+			<security:filter-security-metadata-source
+				use-expressions="true">
+				<security:intercept-url pattern="/login.*" access="permitAll" />
+				<security:intercept-url pattern="/global/**" access="permitAll" />
+				<security:intercept-url pattern="/secure/main**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_OPERATOR','ROLE_DEV')" />
+				<security:intercept-url pattern="/secure/sql/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_DEV')" />
+				<security:intercept-url pattern="/secure/publish/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_OPERATOR','ROLE_DEV')" />
+				<security:intercept-url pattern="/secure/project/**" access="hasRole('ROLE_ADMIN')" />
+			</security:filter-security-metadata-source>
+		</property>
+	</bean>
+
+	<!-- 用户是否拥有所请求资源的权限的管理类 -->
+	<bean id="escmAccessDecisionManager"
+		class="org.springframework.security.access.vote.AffirmativeBased">
+		<constructor-arg name="decisionVoters">
+			<list>
+				<bean class="org.springframework.security.web.access.expression.WebExpressionVoter" />
+			</list>
+		</constructor-arg>
+	</bean>
+	
+	<!-- 验证成功后的处理 -->
+	<bean id="escmAuthenticationSuccessHandler"
+		class="com.sunwayworld.escm.core.security.EscmAuthenticationSuccessHandler">
+		<property name="defaultTargetUrl" value="/secure/main.htm" />
+	</bean>
+
+	<!-- 验证失败后的处理 -->
+	<bean id="escmAuthenticationFailureHandler"
+		class="com.sunwayworld.escm.core.security.EscmAuthenticationFailureHandler">
+		<!-- 可以配置相应的跳转方式。属性forwardToDestination为true采用forward false为sendRedirect -->
+		<property name="defaultFailureUrl" value="/login.htm?fail=1" />
+		<!-- 登录用户的参数名称 -->
+		<property name="usernameParameter" value="id" />
+	</bean>
+
+	<!-- 实现UserDetailsService -->
+	<bean id="escmUserDetailsService"
+		class="com.sunwayworld.escm.core.security.EscmUserDetailsServiceImpl" />
+
+	<!-- 密码加密 -->
+	<bean id="passwordEncoder"
+		class="org.springframework.security.authentication.encoding.Md5PasswordEncoder" />
+
+	<!-- 未登录的切入点 -->
+	<bean id="authenticationEntryPoint"
+		class="org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint">
+		<constructor-arg name="loginFormUrl" value="/login.htm" />
+	</bean>
+
+	<bean id="escmConcurrentSessionControlAuthenticationStrategy"
+		class="org.springframework.security.web.authentication.session.ConcurrentSessionControlAuthenticationStrategy">
+		<constructor-arg name="sessionRegistry" ref="escmSessionRegistry" />
+		<property name="maximumSessions" value="1" />
+		<property name="exceptionIfMaximumExceeded" value="true" />
+	</bean>
+
+	<bean id="escmSessionRegistry"
+		class="org.springframework.security.core.session.SessionRegistryImpl" />
+
+
+	<bean id="escmConcurrentSessionFilter"
+		class="org.springframework.security.web.session.ConcurrentSessionFilter">
+		<constructor-arg name="sessionRegistry" ref="escmSessionRegistry" />
+		<constructor-arg name="expiredUrl" value="/login.htm?concurrent=1" />
+	</bean>
+</beans>
